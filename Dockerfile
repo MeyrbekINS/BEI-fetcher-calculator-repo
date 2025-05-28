@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Copy the requirements file into the container
 # (Ensure pandas and boto3 are in this requirements.txt)
-COPY requirements.txt 
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the script into the container
