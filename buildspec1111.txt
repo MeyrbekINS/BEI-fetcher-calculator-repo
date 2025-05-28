@@ -1,0 +1,39 @@
+# --- START OF FILE buildspec_breakeven.yml ---
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      # Replace YOUR_ACCOUNT_ID and ensure $AWS_DEFAULT_REGION is correct (e.g., eu-north-1)
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      # Define your ECR repository URI for the breakeven calculator
+      # Replace YOUR_ECR_REPOSITORY_NAME_FOR_BREAKEVEN with 'breakeven-calculator' or your chosen name
+      - REPOSITORY_URI=YOUR_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/YOUR_ECR_REPOSITORY_NAME_FOR_BREAKEVEN
+      - IMAGE_TAG=latest
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image for Breakeven Calculator...
+      # Assuming this buildspec.yml is in the 'breakeven-calculator' directory
+      # and Dockerfile_Breakeven & requirements_breakeven.txt are also in this directory.
+      # If Dockerfile has a different name (e.g., Dockerfile_Breakeven), specify it with -f
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG -f Dockerfile_Breakeven .
+
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image to Amazon ECR...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Docker image for Breakeven Calculator pushed successfully.
+      # (Optional but recommended for ECS integration)
+      # Replace 'YOUR_CONTAINER_NAME_IN_ECS_TASK_DEF' with the name used in the breakeven ECS Task Definition (e.g., breakeven-calculator-container)
+      - echo Writing image definitions file...
+      - printf '[{"name":"YOUR_CONTAINER_NAME_IN_ECS_TASK_DEF","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions_breakeven.json
+
+artifacts:
+  files:
+    # This tells CodeBuild to include this file as an artifact.
+    - imagedefinitions_breakeven.json
+# --- END OF FILE buildspec_breakeven.yml ---
