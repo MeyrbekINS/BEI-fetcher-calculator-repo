@@ -11,11 +11,11 @@ COPY requirements_breakeven.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the script into the container
-COPY Calculate_Breakeven.py .
+COPY CNBC-BEI.py .
 
 # Make Python output unbuffered
 ENV PYTHONUNBUFFERED 1
 
 # Command to run the application
-CMD ["python", "Calculate_Breakeven.py"]
+CMD ["python", "CNBC-BEI.py"]
 # --- END OF FILE Dockerfile_Breakeven ---
