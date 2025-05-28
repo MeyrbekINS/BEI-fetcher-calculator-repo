@@ -6,7 +6,7 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       # Replace YOUR_ACCOUNT_ID and ensure $AWS_DEFAULT_REGION is correct (e.g., eu-north-1)
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 305362906248.dkr.ecr.eu-north-1.amazonaws.com
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 305362906248.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
       # Define your ECR repository URI for the breakeven calculator
       # Replace YOUR_ECR_REPOSITORY_NAME_FOR_BREAKEVEN with 'breakeven-calculator' or your chosen name
       - REPOSITORY_URI=305362906248.dkr.ecr.eu-north-1.amazonaws.com/bei-calc-repo
