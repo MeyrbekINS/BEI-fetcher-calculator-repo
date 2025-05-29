@@ -426,7 +426,7 @@
                                         year: 'YYYY'
                                     }
                                 },
-                                title: { display: false }
+                                title: { display: false },
 
                                 // Improvement 5: Get rid of X-axis grid
 
@@ -515,9 +515,10 @@
 
             const first = data[0].timestamp;
             const last = data[data.length - 1].timestamp;
+            const rangeMillis = last - first;
             const rangeDays = (last - first) / (1000 * 60 * 60 * 24);
 
-            if (metricId.includes('_1D_')) return (rangeMillis < 2 * 60 * 60 * 1000) ? 'minute' : 'hour'; // If less than 2 hours, use minute, else hour
+            if (metricId.includes('_1D_')) return (rangeMillis < 2 * 60 * 60 * 1000)) ? 'minute' : 'hour'; // If less than 2 hours, use minute, else hour
             if (metricId.includes('_5D_')) return 'hour'; 
             if (metricId.includes('_1M_')) return 'day'; // Assuming 1M would be similar to 1Y/5Y in terms of data points for x-axis
             if (metricId.includes('_1Y_')) return (rangeDays <= 90) ? 'day' : 'month'; // If showing < 90 days of 1Y data, use day, else month
@@ -540,6 +541,10 @@
 
             // Load a default US10YTIP chart, e.g., 1D
             loadSingleMetricChart('CNBC_US10YTIP_1D_Close', 'us10ytipChart', 'US10YTIP 1-Day', 'Yield (%)', 'loadingIndicatorUS10YTIP');
+            
+            loadSingleMetricChart('CNBC_US10Y_1D_Close', 'us10yChart', 'US10Y 1-Day', 'Yield (%)', 'loadingIndicatorUS10Y');
+            
+            loadSingleMetricChart('CALCULATED_Breakeven_Inflation_1D_Rate', 'breakevenChart', 'Breakeven 1-Day', 'Rate (%)', 'loadingIndicatorBreakeven');
         });
     </script>
 </body>
