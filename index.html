@@ -75,7 +75,13 @@
             width: 100%;
         }
         .control-group button:hover, .time-range-controls button:hover { background-color: #2980b9; }
-        #loadingIndicatorSOFR, #loadingIndicatorUS10YTIP { text-align: center; font-size: 1.2em; padding: 20px; display: none; }
+        #loadingIndicatorSOFR, #loadingIndicatorUS10YTIP, #loadingIndicatorUS10Y, #loadingIndicatorBreakeven { 
+        text-align: center; 
+        font-size: 1.2em;
+        padding: 20px; 
+        display: none;
+        }
+        
     </style>
 </head>
 <body>
@@ -127,7 +133,7 @@
                 <button onclick="loadSingleMetricChart('CNBC_US10YTIP_1Y_Close', 'us10ytipChart', 'US10YTIP 1-Year', 'Yield (%)', 'loadingIndicatorUS10YTIP')">1Y</button>
                 <button onclick="loadSingleMetricChart('CNBC_US10YTIP_5Y_Close', 'us10ytipChart', 'US10YTIP 5-Year', 'Yield (%)', 'loadingIndicatorUS10YTIP')">5Y</button>
             </div>
-                </div>loadSingleMetricChart('CNBC_US10YTIP_1D_Close', 'us10tipyChart', 'US10YTIP 1-Day', 'Yield (%)', 'loadingIndicatorUS10YTIP')</div>
+                
             <div id="loadingIndicatorUS10YTIP">Loading US10YTIP chart data...</div>
             <div class="chart-canvas-container">
                 <canvas id="us10ytipChart"></canvas>
@@ -144,7 +150,7 @@
                 <button onclick="loadSingleMetricChart('CNBC_US10Y_1Y_Close', 'us10yChart', 'US10Y 1-Year', 'Yield (%)', 'loadingIndicatorUS10Y')">1Y</button>
                 <button onclick="loadSingleMetricChart('CNBC_US10Y_5Y_Close', 'us10yChart', 'US10Y 5-Year', 'Yield (%)', 'loadingIndicatorUS10Y')">5Y</button>
             </div>
-            loadSingleMetricChart('CNBC_US10Y_1D_Close', 'us10yChart', 'US10Y 1-Day', 'Yield (%)', 'loadingIndicatorUS10Y')
+            
             <div id="loadingIndicatorUS10Y">Loading US10Y chart data...</div>
             <div class="chart-canvas-container">
                 <canvas id="us10yChart"></canvas>
@@ -160,7 +166,7 @@
                 <button onclick="loadSingleMetricChart('CALCULATED_Breakeven_Inflation_1Y_Rate', 'breakevenChart', 'Breakeven 1-Year', 'Rate (%)', 'loadingIndicatorBreakeven')">1Y</button
                 <button onclick="loadSingleMetricChart('CALCULATED_Breakeven_Inflation_5Y_Rate', 'breakevenChart', 'Breakeven 5-Year', 'Rate (%)', 'loadingIndicatorBreakeven')">5Y</button>
             </div>
-            loadSingleMetricChart('CALCULATED_Breakeven_Inflation_1D_Rate', 'breakevenChart', 'Breakeven 1-Day', 'Rate (%)', 'loadingIndicatorBreakeven'),
+            
             <div id="loadingIndicatorBreakeven">Loading Breakeven Inflation data...</div>
             <div class="chart-canvas-container">
                 <canvas id="breakevenChart"></canvas>
