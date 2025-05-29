@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Data Dashboard</title> {/* Updated Title */}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #eef1f5; color: #333; }
+        .header { background-color: #2c3e50; color: white; padding: 15px 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 1.8em; }
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center chart groups */
+        }
+        .chart-group { /* Wrapper for a chart and its controls */
+            background-color: #fff;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 1000px;
+        }
+        .chart-group h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .controls-container { /* For SOFR controls */
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px 0 20px 0; /* Reduced padding, focused on top/bottom */
+            /* border-bottom: 1px solid #ddd; */ /* Optional: separator line */
+            /* margin-bottom: 20px; */ /* Optional: space before chart */
+        }
+         .time-range-controls { /* For US10YTIP buttons */
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            padding: 10px; /* Slightly reduced padding */
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+        }
+        .control-group label { font-weight: bold; margin-right: 10px; display: block; margin-bottom: 8px;}
+        .control-group select, .control-group button, .time-range-controls button { /* Shared button style */
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 0.95em;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .control-group select {
+             background-color: white; /* Select specific style */
+             color: #333;
+        }
+        .metrics-selection div { margin-bottom: 5px; }
+        .metrics-selection input[type="checkbox"] { margin-right: 8px; }
+        .chart-canvas-container { /* To maintain aspect ratio if needed, or just height */
+            position: relative;
+            height: 400px; /* Or desired height */
+            width: 100%;
+        }
+        .control-group button:hover, .time-range-controls button:hover { background-color: #2980b9; }
+        #loadingIndicatorSOFR, #loadingIndicatorUS10YTIP { text-align: center; font-size: 1.2em; padding: 20px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Market Data Dashboard</h1>
+    </div>
+
+    <div class="dashboard-container">
+
+        <!-- SOFR Chart Group -->
+        <div class="chart-group">
+            <h2>Interactive SOFR Dashboard</h2>
+            <div class="controls-container">
+                <div class="control-group">
+                    <label for="dateRangeSelectSOFR">Select Date Range:</label>
+                    <select id="dateRangeSelectSOFR">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="180">Last 180 Days</option>
+                        <option value="365">Last 1 Year</option>
+                    </select>
+                </div>
+                <div class="control-group metrics-selection">
+                    <label>Select SOFR Metrics:</label>
+                    <div><input type="checkbox" id="metric_SOFR_Overnight" value="SOFR_Overnight" checked> <label for="metric_SOFR_Overnight">Overnight SOFR</label></div>
+                    <div><input type="checkbox" id="metric_SOFR_1M_Term" value="SOFR_1M_Term" checked> <label for="metric_SOFR_1M_Term">1M Term SOFR</label></div>
+                    <div><input type="checkbox" id="metric_SOFR_3M_Term" value="SOFR_3M_Term" checked> <label for="metric_SOFR_3M_Term">3M Term SOFR</label></div>
+                    <div><input type="checkbox" id="metric_SOFR_6M_Term" value="SOFR_6M_Term"> <label for="metric_SOFR_6M_Term">6M Term SOFR</label></div>
+                    <div><input type="checkbox" id="metric_SOFR_1Y_Term" value="SOFR_1Y_Term"> <label for="metric_SOFR_1Y_Term">1Y Term SOFR</label></div>
+                </div>
+                <div class="control-group">
+                    <label> </label>
+                    <button id="refreshSOFRChartButton">Refresh SOFR Chart</button>
+                </div>
+            </div>
+            <div id="loadingIndicatorSOFR">Loading SOFR chart data...</div>
+            <div class="chart-canvas-container">
+                <canvas id="sofrChart"></canvas>
+            </div>
+        </div>
+
+        <!-- US10YTIP Chart Group -->
+        <div class="chart-group">
+            <h2>U.S. 10-Year TIPS Yield (US10YTIP)</h2>
+            <div class="time-range-controls">
+                <button onclick="loadSingleMetricChart('CNBC_US10YTIP_1D_Close', 'us10ytipChart', 'US10YTIP 1-Day', 'Yield (%)', 'loadingIndicatorUS10YTIP')">1D</button>
+                <button onclick="loadSingleMetricChart('CNBC_US10YTIP_5D_Close', 'us10ytipChart', 'US10YTIP 5-Day', 'Yield (%)', 'loadingIndicatorUS10YTIP')">5D</button>
+                <button onclick="loadSingleMetricChart('CNBC_US10YTIP_1Y_Close', 'us10ytipChart', 'US10YTIP 1-Year', 'Yield (%)', 'loadingIndicatorUS10YTIP')">1Y</button>
+                <button onclick="loadSingleMetricChart('CNBC_US10YTIP_5Y_Close', 'us10ytipChart', 'US10YTIP 5-Year', 'Yield (%)', 'loadingIndicatorUS10YTIP')">5Y</button>
+            </div>
+            <div id="loadingIndicatorUS10YTIP">Loading US10YTIP chart data...</div>
+            <div class="chart-canvas-container">
+                <canvas id="us10ytipChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- More chart groups can be added here for US10Y and Breakeven -->
+
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const API_BASE_ENDPOINT = 'https://pos3zx48a3.execute-api.eu-north-1.amazonaws.com/data';
+
+        const ALL_SOFR_METRIC_DEFINITIONS = { // Renamed for clarity
+            'SOFR_Overnight': { label: 'Overnight SOFR (%)', color: 'rgb(255, 99, 132)' },
+            'SOFR_1M_Term': { label: '1M Term SOFR (%)', color: 'rgb(54, 162, 235)' },
+            'SOFR_3M_Term': { label: '3M Term SOFR (%)', color: 'rgb(75, 192, 192)' },
+            'SOFR_6M_Term': { label: '6M Term SOFR (%)', color: 'rgb(255, 206, 86)' },
+            'SOFR_1Y_Term': { label: '1Y Term SOFR (%)', color: 'rgb(153, 102, 255)' },
+            // SOFR_Index and Averages can be added back if needed, ensure Lambda supports them
+        };
+
+        // --- DOM Elements ---
+        const dateRangeSelectSOFR = document.getElementById('dateRangeSelectSOFR');
+        const refreshSOFRChartButton = document.getElementById('refreshSOFRChartButton');
+        const sofrMetricCheckboxes = document.querySelectorAll('.metrics-selection input[type="checkbox"]'); // Specific to SOFR
+        const loadingIndicatorSOFR = document.getElementById('loadingIndicatorSOFR');
+        const sofrChartCtx = document.getElementById('sofrChart').getContext('2d');
+        let sofrChartInstance; // Renamed for clarity
+
+        // For US10YTIP and future single-metric charts
+        let activeChartObjects = {}; // To store multiple chart instances like { 'us10ytipChart': chartJsObject }
+
+
+        // --- SOFR Chart Specific Functions (Adapted from your existing logic) ---
+        function getSelectedSOFRMetricIds() {
+            const selectedIds = [];
+            sofrMetricCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedIds.push(checkbox.value);
+                }
+            });
+            return selectedIds;
+        }
+
+        async function fetchSOFRDataAndRenderChart() {
+            const selectedDays = dateRangeSelectSOFR.value;
+            const selectedMetricIds = getSelectedSOFRMetricIds();
+
+            if (selectedMetricIds.length === 0) {
+                alert('Please select at least one SOFR metric to display.');
+                if(sofrChartInstance) {
+                    sofrChartInstance.destroy();
+                    sofrChartInstance = null;
+                }
+                return;
+            }
+            
+            loadingIndicatorSOFR.style.display = 'block';
+            const url = `${API_BASE_ENDPOINT}?metricId=${selectedMetricIds.join(',')}&days=${selectedDays}`;
+            console.log(`Fetching SOFR data from: ${url}`);
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: "Unknown error structure" }));
+                    console.error('Error fetching SOFR data:', response.status, errorData);
+                    alert(`Error fetching SOFR data: ${errorData.error || response.statusText}`);
+                    loadingIndicatorSOFR.style.display = 'none';
+                    return;
+                }
+
+                const apiData = await response.json();
+                console.log('Received SOFR data:', apiData);
+                loadingIndicatorSOFR.style.display = 'none';
+
+                const datasets = [];
+                selectedMetricIds.forEach(metricId => {
+                    if (apiData[metricId] && Array.isArray(apiData[metricId]) && apiData[metricId].length > 0) {
+                        const metricInfo = ALL_SOFR_METRIC_DEFINITIONS[metricId];
+                        const metricData = apiData[metricId].sort((a, b) => a.timestamp - b.timestamp);
+                        
+                        datasets.push({
+                            label: metricInfo.label,
+                            data: metricData.map(item => ({ x: item.timestamp, y: parseFloat(item.value) })),
+                            borderColor: metricInfo.color,
+                            tension: 0.1,
+                            fill: false,
+                            yAxisID: metricInfo.yAxisID || 'y'
+                        });
+                    } else {
+                        console.warn(`No data or empty data array for SOFR metric: ${metricId}`);
+                    }
+                });
+
+                if (datasets.length === 0) {
+                    alert('No SOFR data found for the selected metrics and date range.');
+                     if(sofrChartInstance) {
+                        sofrChartInstance.destroy();
+                        sofrChartInstance = null;
+                    }
+                    return;
+                }
+
+                const chartConfig = {
+                    type: 'line',
+                    data: { datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, /* Allow height to be controlled by container */
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    tooltipFormat: 'll HH:mm',
+                                    displayFormats: { day: 'MMM D' }
+                                },
+                                title: { display: true, text: 'Date' }
+                            },
+                            y: {
+                                type: 'linear', position: 'left', beginAtZero: false,
+                                title: { display: true, text: 'Rate (%)' }
+                            }
+                            // Add y1 axis config here if SOFR_Index is re-enabled and uses it
+                        },
+                        plugins: {
+                            title: { display: true, text: `SOFR Rates - Last ${selectedDays} Days` },
+                            legend: { position: 'top' },
+                            tooltip: { mode: 'index', intersect: false }
+                        },
+                        interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                    }
+                };
+                
+                // Add secondary y-axis for SOFR_Index if needed (logic from your original script)
+                // if (datasets.some(ds => ds.yAxisID === 'y1')) { ... }
+
+
+                if (sofrChartInstance) sofrChartInstance.destroy();
+                sofrChartInstance = new Chart(sofrChartCtx, chartConfig);
+                console.log('SOFR Chart created/updated.');
+
+            } catch (error) {
+                console.error('Failed to fetch or render SOFR chart:', error);
+                alert('An error occurred while loading the SOFR chart data. Check the console for details.');
+                loadingIndicatorSOFR.style.display = 'none';
+            }
+        }
+
+        // --- Generic Function for Single Metric Charts (like US10YTIP) ---
+        async function loadSingleMetricChart(metricId, canvasId, chartTitle, yAxisText, loadingIndicatorId) {
+            const loadingIndicator = document.getElementById(loadingIndicatorId);
+            loadingIndicator.style.display = 'block';
+
+            // The `days` parameter is not strictly needed here if the metricId itself implies the range (e.g., _1D, _5Y)
+            // and the Lambda knows how to fetch all data for that metric.
+            // If your Lambda *requires* a 'days' param, you might pass a large default (e.g., &days=2000 for 5Y data)
+            // or modify the Lambda to not require 'days' for these specific CNBC metrics.
+            const url = `${API_BASE_ENDPOINT}?metricId=${metricId}`; 
+            console.log(`Fetching single metric data from: ${url}`);
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: "Unknown error structure" }));
+                    console.error(`Error fetching data for ${metricId}:`, response.status, errorData);
+                    alert(`Error fetching ${metricId}: ${errorData.error || response.statusText}`);
+                    loadingIndicator.style.display = 'none';
+                    return;
+                }
+
+                const apiData = await response.json();
+                console.log(`Received data for ${metricId}:`, apiData);
+                loadingIndicator.style.display = 'none';
+
+                // Expecting apiData to be like: { "CNBC_US10YTIP_1D_Close": [{timestamp: ..., value: ...}, ...] }
+                const chartData = apiData[metricId];
+
+                if (!chartData || !Array.isArray(chartData) || chartData.length === 0) {
+                    alert(`No data found for ${metricId}.`);
+                    console.warn(`No data or empty data array for metric: ${metricId}`);
+                    if (activeChartObjects[canvasId]) {
+                        activeChartObjects[canvasId].destroy();
+                    }
+                    // Optional: Display "No data" message on canvas
+                    const canvasCtx = document.getElementById(canvasId).getContext('2d');
+                    canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height); // Clear previous drawing
+                    canvasCtx.font = "16px Arial";
+                    canvasCtx.fillStyle = "grey";
+                    canvasCtx.textAlign = "center";
+                    canvasCtx.fillText("No data available for this period.", canvasCtx.canvas.width / 2, canvasCtx.canvas.height / 2);
+                    return;
+                }
+
+                const sortedData = chartData.sort((a, b) => a.timestamp - b.timestamp);
+                
+                const labels = sortedData.map(item => item.timestamp); // Use raw timestamps for Chart.js
+                const values = sortedData.map(item => parseFloat(item.value));
+
+                const chartConfig = {
+                    type: 'line',
+                    data: {
+                        // labels: labels, // Not needed if data is {x,y}
+                        datasets: [{
+                            label: chartTitle, // Use the friendly chartTitle
+                            data: sortedData.map(item => ({ x: item.timestamp, y: parseFloat(item.value) })),
+                            borderColor: 'rgb(0, 123, 255)', // A different color for this chart
+                            tension: 0.1,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    // Dynamically set unit based on metricId or data range
+                                    unit: determineChartUnit(metricId, sortedData), 
+                                    tooltipFormat: 'll HH:mm', 
+                                    displayFormats: { // Adjust these as needed
+                                        millisecond: 'HH:mm:ss.SSS',
+                                        second: 'HH:mm:ss',
+                                        minute: 'HH:mm',
+                                        hour: 'MMM D, HH:mm',
+                                        day: 'MMM D, YYYY',
+                                        week: 'MMM D, YYYY',
+                                        month: 'MMM YYYY',
+                                        quarter: '[Q]Q YYYY',
+                                        year: 'YYYY'
+                                    }
+                                },
+                                title: { display: true, text: 'Date / Time' }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                title: { display: true, text: yAxisText }
+                            }
+                        },
+                        plugins: {
+                            title: { display: true, text: chartTitle },
+                            legend: { display: true, position: 'top' }, // Show legend, can be { display: false } if only one dataset
+                            tooltip: { 
+                                mode: 'index', 
+                                intersect: false,
+                                callbacks: {
+                                     label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            // Adjust formatting based on the data (e.g. TIPS yields are often to 3-4 decimal places)
+                                            label += context.parsed.y.toFixed(4) + (yAxisText.includes('%') ? '%' : '');
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                    }
+                };
+
+                if (activeChartObjects[canvasId]) {
+                    activeChartObjects[canvasId].destroy();
+                }
+                activeChartObjects[canvasId] = new Chart(document.getElementById(canvasId).getContext('2d'), chartConfig);
+                console.log(`${chartTitle} chart created/updated.`);
+
+            } catch (error) {
+                console.error(`Failed to fetch or render chart for ${metricId}:`, error);
+                alert(`An error occurred while loading ${metricId}. Check console.`);
+                loadingIndicator.style.display = 'none';
+            }
+        }
+        
+        function determineChartUnit(metricId, data) {
+            if (!data || data.length < 2) return 'day'; // Default
+
+            const first = data[0].timestamp;
+            const last = data[data.length - 1].timestamp;
+            const rangeDays = (last - first) / (1000 * 60 * 60 * 24);
+
+            if (metricId.includes('_1D_')) return 'minute'; // Or 'hour' if too dense
+            if (metricId.includes('_5D_')) return 'hour';   // Or 'day'
+            if (metricId.includes('_1M_')) return 'day';
+            if (metricId.includes('_1Y_')) return 'month';
+            if (metricId.includes('_5Y_')) return 'year';
+            
+            // Fallback based on actual data range if metricId doesn't give enough info
+            if (rangeDays <= 2) return 'minute';
+            if (rangeDays <= 35) return 'day';
+            if (rangeDays <= 365 * 2) return 'month';
+            return 'year';
+        }
+
+
+        // --- Event Listeners ---
+        refreshSOFRChartButton.addEventListener('click', fetchSOFRDataAndRenderChart);
+
+        // --- Initial Chart Loads ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchSOFRDataAndRenderChart(); // Load SOFR chart by default
+
+            // Load a default US10YTIP chart, e.g., 1D
+            loadSingleMetricChart('CNBC_US10YTIP_1D_Close', 'us10ytipChart', 'US10YTIP 1-Day', 'Yield (%)', 'loadingIndicatorUS10YTIP');
+        });
+    </script>
+</body>
+</html>
