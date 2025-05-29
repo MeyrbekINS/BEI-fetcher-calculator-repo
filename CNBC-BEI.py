@@ -63,9 +63,17 @@ def query_metric_data(metric_id):
         if 'timestamp' not in df.columns or 'value' not in df.columns:
             print(f"Queried data for {metric_id} is missing 'timestamp' or 'value' columns.")
             return pd.DataFrame(columns=['DateTime', 'Value'])
-            
-        df['DateTime'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
-        # Convert Decimal from DynamoDB to float for calculation
+
+#Bugugaga
+        
+        try:
+            df['timestamp_numeric'] = df['timestamp'].apply(lambda x: int(x) if isinstance(x, Decimal) else x)
+        except Exception as e:
+            print(f"Error converting 'timestamp' column to numeric for {metric_id}: {e}")
+            return pd.DaraFrame(columns=['DateTime', 'Value'])
+
+        df['DateTime'] = pd.to_datetime(df['timestamp_numeric'], unit='ms', utc=True)
+      
         df['Value'] = df['value'].apply(lambda x: float(x) if isinstance(x, Decimal) else x) 
         print(f"Successfully fetched {len(df)} items for {metric_id}.")
         return df[['DateTime', 'Value']]
