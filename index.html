@@ -127,13 +127,47 @@
                 <button onclick="loadSingleMetricChart('CNBC_US10YTIP_1Y_Close', 'us10ytipChart', 'US10YTIP 1-Year', 'Yield (%)', 'loadingIndicatorUS10YTIP')">1Y</button>
                 <button onclick="loadSingleMetricChart('CNBC_US10YTIP_5Y_Close', 'us10ytipChart', 'US10YTIP 5-Year', 'Yield (%)', 'loadingIndicatorUS10YTIP')">5Y</button>
             </div>
+            loadSingleMetricChart('CNBC_US10YTIP_1D_Close', 'us10tipyChart', 'US10YTIP 1-Day', 'Yield (%)', 'loadingIndicatorUS10YTIP');
             <div id="loadingIndicatorUS10YTIP">Loading US10YTIP chart data...</div>
             <div class="chart-canvas-container">
                 <canvas id="us10ytipChart"></canvas>
             </div>
         </div>
-        
-        <!-- More chart groups can be added here for US10Y and Breakeven -->
+
+        <!-- Adding US10Y and BEI>
+        <!-- US10Y Chart Group -->
+        <div class="chart-group">
+            <h2>U.S. 10-Year Treasury Yield (US10Y)</h2>
+            <div class="time-range-controls">
+                <button onclick="loadSingleMetricChart('CNBC_US10Y_1D_Close', 'us10yChart', 'US10Y 1-Day', 'Yield (%)', 'loadingIndicatorUS10Y')">1D</button>
+                <button onclick="loadSingleMetricChart('CNBC_US10Y_5D_Close', 'us10yChart', 'US10Y 5-Day', 'Yield (%)', 'loadingIndicatorUS10Y')">5D</button>
+                <button onclick="loadSingleMetricChart('CNBC_US10Y_1Y_Close', 'us10yChart', 'US10Y 1-Year', 'Yield (%)', 'loadingIndicatorUS10Y')">1Y</button>
+                <button onclick="loadSingleMetricChart('CNBC_US10Y_5Y_Close', 'us10yChart', 'US10Y 5-Year', 'Yield (%)', 'loadingIndicatorUS10Y')">5Y</button>
+            </div>
+            loadSingleMetricChart('CNBC_US10Y_1D_Close', 'us10yChart', 'US10Y 1-Day', 'Yield (%)', 'loadingIndicatorUS10Y');
+            <div id="loadingIndicatorUS10Y">Loading US10Y chart data...</div>
+            <div class="chart-canvas-container">
+                <canvas id="us10yChart"></canvas>
+            </div>
+        </div>
+
+<!-- Breakeven Inflation Chart Group -->
+        <div class="chart-group">
+            <h2>10-Year Breakeven Inflation Rate</h2>
+            <div class="time-range-controls">
+                <button onclick="loadSingleMetricChart('CALCULATED_Breakeven_Inflation_1D_Rate', 'breakevenChart', 'Breakeven 1-Day', 'Rate (%)', 'loadingIndicatorBreakeven')">1D</button>
+                <button onclick="loadSingleMetricChart('CALCULATED_Breakeven_Inflation_5D_Rate', 'breakevenChart', 'Breakeven 5-Day', 'Rate (%)', 'loadingIndicatorBreakeven')">5D</button>
+                <button onclick="loadSingleMetricChart('CALCULATED_Breakeven_Inflation_1Y_Rate', 'breakevenChart', 'Breakeven 1-Year', 'Rate (%)', 'loadingIndicatorBreakeven')">1Y</button
+                <button onclick="loadSingleMetricChart('CALCULATED_Breakeven_Inflation_5Y_Rate', 'breakevenChart', 'Breakeven 5-Year', 'Rate (%)', 'loadingIndicatorBreakeven')">5Y</button>
+            </div>
+            loadSingleMetricChart('CALCULATED_Breakeven_Inflation_1D_Rate', 'breakevenChart', 'Breakeven 1-Day', 'Rate (%)', 'loadingIndicatorBreakeven');
+            <div id="loadingIndicatorBreakeven">Loading Breakeven Inflation data...</div>
+            <div class="chart-canvas-container">
+                <canvas id="breakevenChart"></canvas>
+            </div>
+        </div>
+            
+        <!-- END- US10Y and BEI -->
 
     </div>
 
@@ -328,6 +362,26 @@
                 const labels = sortedData.map(item => item.timestamp); // Use raw timestamps for Chart.js
                 const values = sortedData.map(item => parseFloat(item.value));
 
+                   // Determine x-axis min and max for default view
+                let xAxisMin = undefined;
+                let xAxisMax = chartLabels.length > 0 ? chartLabels[chartLabels.length - 1] : undefined; // Default to showing up to the latest point
+
+                if (chartLabels.length > 0) {
+                    const lastTimestamp = chartLabels[chartLabels.length - 1];
+                    if (metricId.includes('_5D_')) { // For 5D data, show last 1 day initially
+                        xAxisMin = lastTimestamp - (1 * 24 * 60 * 60 * 1000);
+                    } else if (metricId.includes('_1Y_')) { // For 1Y data, show last 30 days initially
+                        xAxisMin = lastTimestamp - (30 * 24 * 60 * 60 * 1000);
+                    }
+                    // For _1D_ and _5Y_, we'll show all data by default (min remains undefined or could be set to first timestamp)
+                     else if (metricId.includes('_1D_') || metricId.includes('_5Y_')) {
+                        xAxisMin = chartLabels[0]; // Show all data from the beginning
+                    }
+                }
+
+
+                
+                
                 const chartConfig = {
                     type: 'line',
                     data: {
@@ -335,9 +389,12 @@
                         datasets: [{
                             label: chartTitle, // Use the friendly chartTitle
                             data: sortedData.map(item => ({ x: item.timestamp, y: parseFloat(item.value) })),
-                            borderColor: 'rgb(0, 123, 255)', // A different color for this chart
+                            borderColor: 'rgb(75, 192, 192)', // A different color for this chart
                             tension: 0.1,
-                            fill: false
+                            fill: false,
+                            pointRadius: 0,
+                            pointHoverRadius: 2, // Keep a small hover radius for tooltip
+                            borderWidth: 1.5 // Make lines a bit thinner if desired
                         }]
                     },
                     options: {
@@ -350,32 +407,64 @@
                                     // Dynamically set unit based on metricId or data range
                                     unit: determineChartUnit(metricId, sortedData), 
                                     tooltipFormat: 'll HH:mm', 
-                                    displayFormats: { // Adjust these as needed
+                                    // Improvement 4: Minimize Time at the Bottom (X-axis labels)
+                                    displayFormats: {
                                         millisecond: 'HH:mm:ss.SSS',
                                         second: 'HH:mm:ss',
-                                        minute: 'HH:mm',
-                                        hour: 'MMM D, HH:mm',
-                                        day: 'MMM D, YYYY',
-                                        week: 'MMM D, YYYY',
+                                        minute: 'HH:mm', // Just time for minute scale
+                                        hour: 'HH:mm',   // Just time for hour scale (if 1D/5D falls here)
+                                        day: 'MMM D',
+                                        week: 'MMM D',
                                         month: 'MMM YYYY',
                                         quarter: '[Q]Q YYYY',
                                         year: 'YYYY'
                                     }
                                 },
-                                title: { display: true, text: 'Date / Time' }
+                                title: { display: false }
+
+                                // Improvement 5: Get rid of X-axis grid
+
+                                grid: {
+                                    display: false
+                                },
+                                // Improvement 7: Default time ranges on load/switch
+                                min: xAxisMin,
+                                max: xAxisMax
+                                
                             },
                             y: {
                                 beginAtZero: false,
-                                title: { display: true, text: yAxisText }
+                                title: { display: true, text: yAxisText },
+                                // Improvement 5: Get rid of Y-axis grid
+                                grid: {
+                                    display: false 
+                            },
+                                  // Improvement 1 & 2 (Partial): Position Y-axis ticks and labels on the right like TradingView
+                                position: 'right', 
+                                ticks: {
+                                    mirror: false, // Ensures ticks are outside, labels depend on position
+                                    padding: 5,
+                                       // Callback to format Y-axis labels if needed (e.g., toFixed(3))
+                                    callback: function(value, index, values) {
+                                        return value.toFixed(3); // Show 3 decimal places on Y-axis
+                                    }
+                                }
                             }
                         },
                         plugins: {
-                            title: { display: true, text: chartTitle },
-                            legend: { display: true, position: 'top' }, // Show legend, can be { display: false } if only one dataset
+                             // Improvement 1: Tooltip Customization
                             tooltip: { 
                                 mode: 'index', 
                                 intersect: false,
                                 callbacks: {
+                                    title: function(tooltipItems) {
+                                        if (tooltipItems.length > 0) {
+                                            const date = new Date(tooltipItems[0].parsed.x);
+                                            return moment(date).format('MMM D, YYYY HH:mm:ss'); // Using moment for consistent formatting
+                                        }
+                                        return '';
+                                    },
+
                                      label: function(context) {
                                         let label = context.dataset.label || '';
                                         if (label) {
@@ -387,10 +476,18 @@
                                         }
                                         return label;
                                     }
-                                }
+                                },
+                                displayColors: false // Don't show color box in tooltip if only one dataset
+                            },
+                            legend: {
+                                display: false // Hide legend if chartTitle is enough and only one line
                             }
                         },
-                        interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                        interaction: { 
+                            mode: 'index', 
+                            axis: 'x', 
+                            intersect: false 
+                        }
                     }
                 };
 
@@ -414,16 +511,16 @@
             const last = data[data.length - 1].timestamp;
             const rangeDays = (last - first) / (1000 * 60 * 60 * 24);
 
-            if (metricId.includes('_1D_')) return 'minute'; // Or 'hour' if too dense
-            if (metricId.includes('_5D_')) return 'hour';   // Or 'day'
-            if (metricId.includes('_1M_')) return 'day';
-            if (metricId.includes('_1Y_')) return 'month';
-            if (metricId.includes('_5Y_')) return 'year';
+            if (metricId.includes('_1D_')) return (rangeMillis < 2 * 60 * 60 * 1000) ? 'minute' : 'hour'; // If less than 2 hours, use minute, else hour
+            if (metricId.includes('_5D_')) return 'hour'; 
+            if (metricId.includes('_1M_')) return 'day'; // Assuming 1M would be similar to 1Y/5Y in terms of data points for x-axis
+            if (metricId.includes('_1Y_')) return (rangeDays <= 90) ? 'day' : 'month'; // If showing < 90 days of 1Y data, use day, else month
+            if (metricId.includes('_5Y_')) return 'month'; // Or 'year' if very sparse or long
             
-            // Fallback based on actual data range if metricId doesn't give enough info
-            if (rangeDays <= 2) return 'minute';
-            if (rangeDays <= 35) return 'day';
-            if (rangeDays <= 365 * 2) return 'month';
+            if (rangeDays <= 1.5) return 'minute'; // For very short ranges not covered by ID
+            if (rangeDays <= 7) return 'hour';    // Up to a week
+            if (rangeDays <= (30*3)) return 'day'; // Up to ~3 months
+            if (rangeDays <= (365*2)) return 'month'; // Up to 2 years
             return 'year';
         }
 
